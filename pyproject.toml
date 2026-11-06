@@ -1,0 +1,17 @@
+[project]
+name = "comfyui-mossimageprompt"
+description = "MOSS-Image prompt with up to 4 reference images read by the text encoder, each with its own strength slider, plus one for the prompt's words. No VAE or LoRA needed."
+version = "1.0.0"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/Dragon7108/ComfyUI-MOSSImagePrompt"
+
+[tool.comfy]
+# PublisherId comes from your account at https://registry.comfy.org — fill it in before
+# publishing to the Comfy registry. (Not needed for plain GitHub / Manager-git-URL installs.)
+PublisherId = ""
+DisplayName = "ComfyUI-MOSSImagePrompt"
+Icon = ""
