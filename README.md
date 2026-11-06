@@ -2,6 +2,10 @@
 
 A copy of ComfyUI's **Text Encode MOSS-Image Edit** node (no-VAE path) that gives **each reference image its own strength slider**, plus one for the prompt's words.
 
+![Same prompt and seed: with no references, then with a watercolor reference at 0.10 and a pulp-monster reference at 0.05, 0.12 and 0.20](assets/example_strip.jpg)
+
+*The watercolor reference stays at 0.10 and sets the medium. Raising only the monster's strength brings its subject in, until at 0.20 it takes over and the watercolor fades.*
+
 ## Why
 
 MOSS-Image's text encoder (Qwen3.5) is a vision-language model: give it images without a VAE and it reads them alongside your prompt. Each image becomes about **144 tokens**, while a prompt might be 10, so the images drown out your words. Core's single `image_strength` turns *all* images down together. This node lets you weight them separately and choose which one leads.
@@ -20,6 +24,17 @@ git clone https://github.com/Dragon7108/ComfyUI-MOSSImagePrompt
 Restart ComfyUI. No extra dependencies.
 
 **Requires** a ComfyUI version that includes MOSS-Image's `context_attention_bias` (PR #17320, the one that added `image_strength` to the core node). On older versions the sliders silently do nothing.
+
+## Example workflow
+
+[`example_workflows/MOSS_Image_Prompt.json`](example_workflows/MOSS_Image_Prompt.json) reproduces the image above. It also shows up in ComfyUI's Templates browser under this pack's name.
+
+1. Load it (drag the JSON onto the canvas, or open it from Templates).
+2. Get the three model files from [Comfy-Org/MOSS-Image](https://huggingface.co/Comfy-Org/MOSS-Image): `moss_image_sft_int8_convrot.safetensors` (diffusion_models), `qwen3.5_9b_w4a8_gptq.safetensors` (text_encoders), `flux2-vae_small.safetensors` (vae). The loaders carry download links.
+3. Drag `example_watercolor.jpg` and `example_pulp_monster.jpg` from `example_workflows/` into the two **Load Image** nodes (or copy them to `ComfyUI/input`).
+4. Run, then move `strength_2` (the monster) and watch it come and go.
+
+Both reference images were generated with MOSS-Image for this example.
 
 ## Usage
 
