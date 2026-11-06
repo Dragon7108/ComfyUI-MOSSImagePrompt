@@ -1,8 +1,8 @@
 """MOSS Image Prompt: core's "Text Encode MOSS-Image Edit" (no-VAE path) with a separate weight per image and for the
 prompt's own words.
 
-MOSS's text encoder (Qwen3.5) is a vision-language model. Images given to it become ~150 vision tokens each, which
-swamp a short prompt (ComfyUI PR #17320). Core's `image_strength` turns *all* vision tokens down by the same amount:
+MOSS's text encoder (Qwen3.5) is a vision-language model. Images given to it become ~144 vision tokens each (at 384²),
+which swamp a short prompt (ComfyUI PR #17320). Core's `image_strength` turns *all* vision tokens down by the same amount:
 it adds log(strength) to their attention logits in the DiT through `context_attention_bias`, a bias with one value per
 conditioning token (`comfy/ldm/moss_image/model.py`). This node fills that bias per segment instead:
 - log(strength_i) on image i's vision tokens
@@ -57,11 +57,13 @@ class MOSSImagePrompt:
                    "own weight, plus a weight for the prompt's words. Positive prompt only; no VAE, no LoRA needed.")
 
     def encode(self, clip, prompt, text_strength, vision_size, **kw):
-        images = []
+        images, skipped = [], []
         for i in range(1, SLOTS + 1):
             img, s = kw.get("image_%d" % i), kw.get("strength_%d" % i, 0.05)
             if img is not None and s > 0:
                 images.append((i, img[:1], s))
+            elif img is not None:
+                skipped.append(i)
 
         vl = []
         for _, img, _ in images:
@@ -80,8 +82,8 @@ class MOSSImagePrompt:
             # words start after the last image's <|vision_end|>, or after "<|im_start|>user\n" with no images
             start = img_pos[-1] + 2 if img_pos else ids.index(NEWLINE, ids.index(IM_START)) + 1
         except ValueError:
-            raise ValueError("MOSS Image Prompt: couldn't find the prompt inside the chat template "
-                             "(is this a MOSS-Image text encoder?)")
+            raise ValueError("MOSS Image Prompt: couldn't find the prompt inside the chat template. Use a MOSS-Image "
+                             "text encoder, and don't start the prompt with your own <|im_start|> template.")
 
         bias, info, k = [], [], 0
         tw = math.log(text_strength)
@@ -91,10 +93,12 @@ class MOSSImagePrompt:
                 _, grid = comfy.text_encoders.qwen_vl.process_qwen2vl_images(t[0]["data"], patch_size=16)
                 n = int(grid[0, 1] * grid[0, 2]) // 4  # Qwen3.5 merges 2x2 patches of 16 px into one token
                 bias += [math.log(s)] * n
-                info.append("image_{}: {} vision tokens, strength {:g} (bias {:+.2f})".format(slot, n, s, math.log(s)))
+                info.append("image_{} (Picture {}): {} vision tokens, strength {:g} (bias {:+.2f})".format(
+                    slot, k + 1, n, s, math.log(s)))
                 k += 1
             else:
                 bias.append(tw if start <= p < end else 0.0)
+        info += ["image_{}: left out (strength 0)".format(i) for i in skipped]
         info.append("prompt: {} tokens, strength {:g} (bias {:+.2f})".format(max(0, end - start), text_strength, tw))
 
         n_ctx = conditioning[0][0].shape[1]
@@ -102,6 +106,8 @@ class MOSSImagePrompt:
             raise ValueError("MOSS Image Prompt: bias covers {} tokens but the conditioning has {}".format(len(bias), n_ctx))
         if any(b != 0.0 for b in bias):
             conditioning = node_helpers.conditioning_set_values(conditioning, {"context_attention_bias": torch.tensor([bias])})
+        n_tpl = sum(1 for p, t in enumerate(ids) if t is not None and not start <= p < end)
+        info.append("template + labels: {} tokens (bias +0.00)".format(n_tpl))
         info.append("total context tokens: {}".format(n_ctx))
         return (conditioning, "\n".join(info))
 

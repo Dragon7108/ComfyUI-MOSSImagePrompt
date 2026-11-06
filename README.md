@@ -31,7 +31,7 @@ Load Image ── image_1 ───────────────┼─ MO
 Load Image ── image_2 ───────────────┘
 ```
 
-Keep the negative on a plain **CLIP Text Encode**. There's no VAE input.
+Keep the negative on a plain **CLIP Text Encode**: with no VAE there are no reference latents for the negative to mirror. There's no VAE input.
 
 Found under `model/conditioning/moss_image`, next to the core node.
 
@@ -45,13 +45,19 @@ Found under `model/conditioning/moss_image`, next to the core node.
 | `image_1`…`image_4` | | Optional reference images. Only the first frame of a batch is used. |
 | `strength_1`…`strength_4` | 0.05 | Each image's weight. **1** = unweighted (swamps the prompt), **~0.01–0.05** = a hint (the sweet spot), **0** = image left out. |
 
-The **`info`** output (wire it to a Preview Any) lists each image's token count and the bias applied to every part.
+The **`info`** output (wire it to a Preview Any) lists each image's token count and bias, the prompt's, and the template's. Images are numbered `Picture 1, 2, …` in the order they're used, so with `image_1` left out, `image_2` becomes Picture 1; `info` shows both.
 
-**Tips:** start images around 0.02–0.05 and nudge from there. Strengths are relative multipliers, not percentages: compare two images' strengths directly, and use `text_strength` to balance images against text.
+**Tips:** start images around 0.02–0.05 and nudge from there. Strengths are relative multipliers, not percentages: compare two images' strengths directly, and use `text_strength` to balance images against text. The numbers above are typical observations, not guarantees; results depend on the image.
+
+## Limitations
+
+- **Combine is fine, Concat is not.** `Conditioning (Combine)` and timestep-range nodes keep the bias working. `Conditioning (Concat)` lengthens the tokens but not the bias, so the sampler fails with a shape error (or, with this node on the `conditioning_from` side, the bias is silently dropped). Core's own node has the same limitation.
+- **No `(word:1.2)` weighting.** MOSS's text encoder reads parentheses as literal text; `text_strength` is the only text weighting here.
+- **Don't supply your own chat template.** Prompts starting with `<|im_start|>` bypass MOSS's template and aren't supported.
 
 ## How it works
 
-ComfyUI's MOSS-Image model accepts `context_attention_bias`: one value per conditioning token, added to that token's attention logits in the diffusion model. Core's node puts `log(image_strength)` on every vision token. This node fills the bias per segment instead: `log(strength_i)` on image *i*'s tokens, `log(text_strength)` on the prompt's words, and 0 on the chat template and the `Picture N:` labels. At matching settings the output is pixel-identical to the core node.
+ComfyUI's MOSS-Image model accepts `context_attention_bias`: one value per conditioning token, added to that token's attention logits in the diffusion model. Core's node puts `log(image_strength)` on every vision token. This node fills the bias per segment instead: `log(strength_i)` on image *i*'s tokens, `log(text_strength)` on the prompt's words, and 0 on the chat template and the `Picture N:` labels. At matching settings it builds the same inputs as the core node, and in testing the renders were pixel-identical.
 
 ## License
 

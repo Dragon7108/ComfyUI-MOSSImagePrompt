@@ -10,8 +10,6 @@ dependencies = []
 Repository = "https://github.com/Dragon7108/ComfyUI-MOSSImagePrompt"
 
 [tool.comfy]
-# PublisherId comes from your account at https://registry.comfy.org — fill it in before
-# publishing to the Comfy registry. (Not needed for plain GitHub / Manager-git-URL installs.)
 PublisherId = ""
 DisplayName = "ComfyUI-MOSSImagePrompt"
 Icon = ""
