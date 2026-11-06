@@ -56,11 +56,21 @@ Found under `model/conditioning/moss_image`, next to the core node.
 |---|---|---|
 | `prompt` | | Your text prompt. |
 | `text_strength` | 1.0 | Weight of the prompt's words. Above 1 (2–3) lets the words push back against the images. |
-| `vision_size` | 384 | Each image is downscaled to at most this many pixels squared before the encoder reads it (core uses 384). Bigger = more tokens = more detail and more pull; lower its strength to match. |
+| `vision_size` | 384 | Each image is downscaled to at most this many pixels squared before the encoder reads it (core uses 384). Bigger = more tokens = more detail and more pull; lower its strength to match. Also slower, since every sampling step attends to every token (see below). |
 | `image_1`…`image_4` | | Optional reference images. Only the first frame of a batch is used. |
 | `strength_1`…`strength_4` | 0.05 | Each image's weight. **1** = unweighted (swamps the prompt), **~0.01–0.05** = a hint (the sweet spot), **0** = image left out. |
 
 The **`info`** output (wire it to a Preview Any) lists each image's token count and bias, the prompt's, and the template's. Images are numbered `Picture 1, 2, …` in the order they're used, so with `image_1` left out, `image_2` becomes Picture 1; `info` shows both.
+
+**`vision_size` and speed:** tokens per image grow with its pixel count (about 144 at 384, 576 at 768, 1024 at 1024), and the diffusion model attends to all of them on every step. Measured with two images and a 1024×1024 output on an RTX 5090, 25 steps:
+
+| `vision_size` | context tokens | sampling time |
+|---|---|---|
+| 384 | 321 | 6.2 s |
+| 768 | 1185 | 6.8 s (+10%) |
+| 1024 | 2081 | 7.7 s (+25%) |
+
+Changing the setting also re-encodes the images once (a second or two). More images add up the same way.
 
 **Tips:** start images around 0.02–0.05 and nudge from there. Strengths are relative multipliers, not percentages: compare two images' strengths directly, and use `text_strength` to balance images against text. The numbers above are typical observations, not guarantees; results depend on the image.
 

@@ -44,7 +44,8 @@ class MOSSImagePrompt:
                     "Weight of the prompt's own words. Above 1 lets the words hold their own against the images."}),
                 "vision_size": ("INT", {"default": 384, "min": 64, "max": 1024, "step": 32, "tooltip":
                     "Each image is downscaled to at most this many pixels squared before the vision tower (core: 384). "
-                    "Bigger = more vision tokens = more detail, and more weight."}),
+                    "Bigger = more vision tokens = more detail, and more weight. Also slower: every sampling step "
+                    "attends to all of them (two images at 1024 cost ~25% more time than at 384)."}),
             },
             "optional": optional,
         }
